@@ -13,6 +13,16 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "Prompt AI App"
 
+    SECRET_KEY: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+
+    FIRST_ADMIN_FULL_NAME: str = "Администратор"
+    FIRST_ADMIN_USERNAME: str = "admin"
+    FIRST_ADMIN_EMAIL: str = "admin@example.com"
+    FIRST_ADMIN_PASSWORD: str = "admin12345"
+    FIRST_ADMIN_ORG: str = "Администрация"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -35,7 +45,7 @@ class Settings(BaseSettings):
     def async_database_url(self) -> str:
         """
         Асинхронный URL.
-        Используется приложением FastAPI.
+        Используется FastAPI-приложением.
         """
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:"

@@ -9,5 +9,7 @@ alembic
 pydantic
 pydantic-settings
 python-dotenv
-
 email-validator
+
+python-jose[cryptography]
+pwdlib[argon2]

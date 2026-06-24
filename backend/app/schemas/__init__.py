@@ -9,6 +9,16 @@ from app.schemas.user import (
     UserStatusUpdate,
     UserUpdate,
 )
+from app.schemas.auth import (
+    AdminChangePasswordRequest,
+    AuthResponse,
+    ChangePasswordRequest,
+    ForgotPasswordRequest,
+    LoginRequest,
+    LogoutRequest,
+    RefreshTokenRequest,
+    TokenPair,
+)
 
 __all__ = [
     "ChatCreate",
@@ -26,4 +36,12 @@ __all__ = [
     "UserRoleUpdate",
     "UserStatusUpdate",
     "UserUpdate",
+    "AdminChangePasswordRequest",
+    "AuthResponse",
+    "ChangePasswordRequest",
+    "ForgotPasswordRequest",
+    "LoginRequest",
+    "LogoutRequest",
+    "RefreshTokenRequest",
+    "TokenPair",
 ]
