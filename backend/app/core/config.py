@@ -21,8 +21,24 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
+        """
+        Синхронный URL.
+        Используется Alembic.
+        """
         return (
             f"postgresql+psycopg://{self.POSTGRES_USER}:"
+            f"{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:"
+            f"{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
+    @property
+    def async_database_url(self) -> str:
+        """
+        Асинхронный URL.
+        Используется приложением FastAPI.
+        """
+        return (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:"
             f"{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:"
             f"{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
