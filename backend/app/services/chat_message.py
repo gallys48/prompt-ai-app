@@ -1,10 +1,11 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
 from app.models.chat_message import ChatMessage
 from app.models.enums import MessageSenderType, MessageStatus
+from app.models.user import User
 from app.repositories.chat import ChatRepository
 from app.repositories.chat_message import ChatMessageRepository
 
@@ -14,6 +15,58 @@ class ChatMessageService:
         self.db = db
         self.chats = ChatRepository(db)
         self.messages = ChatMessageRepository(db)
+
+    def _build_stub_assistant_response(self, user_text: str) -> str:
+        return (
+            "Тестовый ответ assistant без обращения к GigaChat.\n\n"
+            f"Ты отправил сообщение:\n{user_text}\n\n"
+            "На следующем этапе это место заменим на фоновую задачу через "
+            "RabbitMQ/Celery и реальный ответ GigaChat."
+        )
+
+    async def send_message_with_stub_response(
+        self,
+        chat_id: int,
+        current_user: User,
+        text: str,
+    ) -> tuple[ChatMessage, ChatMessage]:
+        chat = await self.chats.get_by_user(
+            chat_id=chat_id,
+            user_id=current_user.id,
+        )
+
+        if not chat:
+            raise NotFoundError("Чат не найден")
+
+        user_message = await self.messages.create(
+            {
+                "chat_id": chat.id,
+                "user_id": current_user.id,
+                "sender_type": MessageSenderType.USER,
+                "status": MessageStatus.COMPLETED,
+                "text": text,
+            }
+        )
+
+        assistant_message = await self.messages.create(
+            {
+                "chat_id": chat.id,
+                "user_id": None,
+                "sender_type": MessageSenderType.ASSISTANT,
+                "status": MessageStatus.COMPLETED,
+                "text": self._build_stub_assistant_response(text),
+            }
+        )
+
+        chat.updated_at = datetime.now(UTC)
+        self.db.add(chat)
+
+        await self.db.commit()
+
+        await self.db.refresh(user_message)
+        await self.db.refresh(assistant_message)
+
+        return user_message, assistant_message
 
     async def create_user_message(
         self,
@@ -34,13 +87,6 @@ class ChatMessageService:
                 "status": MessageStatus.COMPLETED,
                 "text": text,
             }
-        )
-
-        await self.chats.update(
-            chat,
-            {
-                "updated_at": datetime.now(timezone.utc),
-            },
         )
 
         await self.db.commit()
@@ -73,13 +119,6 @@ class ChatMessageService:
             }
         )
 
-        await self.chats.update(
-            chat,
-            {
-                "updated_at": datetime.now(timezone.utc),
-            },
-        )
-
         await self.db.commit()
         await self.db.refresh(message)
 
@@ -98,30 +137,15 @@ class ChatMessageService:
         if not message:
             raise NotFoundError("Сообщение не найдено")
 
-        update_data = {
-            "status": status,
-        }
-
-        if text is not None:
-            update_data["text"] = text
-
-        if gigachat_message_id is not None:
-            update_data["gigachat_message_id"] = gigachat_message_id
-
-        if error_message is not None:
-            update_data["error_message"] = error_message
-
-        message = await self.messages.update(message, update_data)
-
-        chat = await self.chats.get(message.chat_id)
-
-        if chat and chat.is_active:
-            await self.chats.update(
-                chat,
-                {
-                    "updated_at": datetime.now(timezone.utc),
-                },
-            )
+        message = await self.messages.update(
+            message,
+            {
+                "text": text,
+                "status": status,
+                "gigachat_message_id": gigachat_message_id,
+                "error_message": error_message,
+            },
+        )
 
         await self.db.commit()
         await self.db.refresh(message)

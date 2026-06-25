@@ -22,3 +22,12 @@ class ChatMessageRead(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SendMessageRequest(BaseModel):
+    text: str = Field(min_length=1)
+
+
+class SendMessageResponse(BaseModel):
+    user_message: ChatMessageRead
+    assistant_message: ChatMessageRead

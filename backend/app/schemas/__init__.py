@@ -1,5 +1,18 @@
-from app.schemas.chat import ChatCreate, ChatRead, ChatUpdate, ChatWithMessages
-from app.schemas.chat_message import ChatMessageCreate, ChatMessageRead
+from app.schemas.chat import (
+    ChatCreate,
+    ChatFromPromptCreate,
+    ChatFromPromptResponse,
+    ChatListResponse,
+    ChatRead,
+    ChatUpdate,
+    ChatWithMessages,
+)
+from app.schemas.chat_message import (
+    ChatMessageCreate,
+    ChatMessageRead,
+    SendMessageRequest,
+    SendMessageResponse,
+)
 from app.schemas.prompt import (
     PromptCreate,
     PromptListResponse,
@@ -32,6 +45,11 @@ __all__ = [
     "ChatWithMessages",
     "ChatMessageCreate",
     "ChatMessageRead",
+    "ChatFromPromptCreate",
+    "ChatFromPromptResponse",
+    "ChatListResponse",
+    "SendMessageRequest",
+    "SendMessageResponse",
     "PromptCreate",
     "PromptListResponse",
     "PromptRead",

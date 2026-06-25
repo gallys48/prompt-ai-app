@@ -9,8 +9,12 @@ class ChatCreate(BaseModel):
     title: str | None = Field(default=None, max_length=255)
 
 
-class ChatUpdate(BaseModel):
+class ChatFromPromptCreate(BaseModel):
     title: str | None = Field(default=None, max_length=255)
+
+
+class ChatUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
 
 
 class ChatRead(BaseModel):
@@ -25,4 +29,17 @@ class ChatRead(BaseModel):
 
 
 class ChatWithMessages(ChatRead):
-    messages: list[ChatMessageRead] = []
+    messages: list[ChatMessageRead] = Field(default_factory=list)
+
+
+class ChatListResponse(BaseModel):
+    items: list[ChatRead]
+    total: int
+    offset: int
+    limit: int
+
+
+class ChatFromPromptResponse(BaseModel):
+    chat: ChatRead
+    user_message: ChatMessageRead
+    assistant_message: ChatMessageRead
