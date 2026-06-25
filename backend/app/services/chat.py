@@ -63,11 +63,8 @@ class ChatService:
                 "chat_id": chat.id,
                 "user_id": None,
                 "sender_type": MessageSenderType.ASSISTANT,
-                "status": MessageStatus.COMPLETED,
-                "text": (
-                    "Тестовый ответ assistant. "
-                    "На следующем этапе вместо этого ответа будет использоваться GigaChat."
-                ),
+                "status": MessageStatus.PENDING,
+                "text": None,
             }
         )
 
@@ -76,6 +73,13 @@ class ChatService:
         await self.db.refresh(chat)
         await self.db.refresh(user_message)
         await self.db.refresh(assistant_message)
+
+        from app.tasks.gigachat import process_gigachat_message
+
+        process_gigachat_message.delay(
+            assistant_message.id,
+            prompt.text,
+        )
 
         return chat, user_message, assistant_message
 

@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     FIRST_ADMIN_PASSWORD: str = "admin12345"
     FIRST_ADMIN_ORG: str = "Администрация"
 
+    CELERY_BROKER_URL: str
+    CELERY_RESULT_BACKEND: str = "rpc://"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

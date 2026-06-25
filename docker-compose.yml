@@ -18,6 +18,25 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: prompt_ai_rabbitmq
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   backend:
     build:
@@ -34,6 +53,23 @@ services:
       postgres:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+  
+  celery_worker:
+    build:
+      context: ./backend
+    container_name: prompt_ai_celery_worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: celery -A app.worker.celery_app:celery_app worker --loglevel=info
 
 volumes:
   postgres_data:
+  rabbitmq_data:

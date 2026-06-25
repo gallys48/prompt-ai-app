@@ -53,8 +53,8 @@ class ChatMessageService:
                 "chat_id": chat.id,
                 "user_id": None,
                 "sender_type": MessageSenderType.ASSISTANT,
-                "status": MessageStatus.COMPLETED,
-                "text": self._build_stub_assistant_response(text),
+                "status": MessageStatus.PENDING,
+                "text": None,
             }
         )
 
@@ -65,6 +65,13 @@ class ChatMessageService:
 
         await self.db.refresh(user_message)
         await self.db.refresh(assistant_message)
+
+        from app.tasks.gigachat import process_gigachat_message
+
+        process_gigachat_message.delay(
+            assistant_message.id,
+            text,
+        )
 
         return user_message, assistant_message
 
