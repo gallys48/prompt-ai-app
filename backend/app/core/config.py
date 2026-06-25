@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     FIRST_ADMIN_PASSWORD: str = "admin12345"
     FIRST_ADMIN_ORG: str = "Администрация"
 
+    GIGACHAT_AUTH_KEY: str
+    GIGACHAT_SCOPE: str = "GIGACHAT_API_PERS"
+    GIGACHAT_MODEL: str = "GigaChat"
+    GIGACHAT_VERIFY_SSL: bool = True
+    GIGACHAT_CA_BUNDLE: str | None = None
+    GIGACHAT_TIMEOUT_SECONDS: int = 60
+
     CELERY_BROKER_URL: str
     CELERY_RESULT_BACKEND: str = "rpc://"
 

@@ -78,7 +78,7 @@ class ChatService:
 
         process_gigachat_message.delay(
             assistant_message.id,
-            prompt.text,
+            chat.id,
         )
 
         return chat, user_message, assistant_message

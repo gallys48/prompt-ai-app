@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import BadRequestError, NotFoundError
 from app.models.chat_message import ChatMessage
 from app.models.enums import MessageSenderType, MessageStatus
 from app.models.user import User
@@ -24,7 +24,7 @@ class ChatMessageService:
             "RabbitMQ/Celery и реальный ответ GigaChat."
         )
 
-    async def send_message_with_stub_response(
+    async def send_message_to_gigachat(
         self,
         chat_id: int,
         current_user: User,
@@ -70,7 +70,7 @@ class ChatMessageService:
 
         process_gigachat_message.delay(
             assistant_message.id,
-            text,
+            chat.id,
         )
 
         return user_message, assistant_message
@@ -156,5 +156,114 @@ class ChatMessageService:
 
         await self.db.commit()
         await self.db.refresh(message)
+
+        return message
+    
+    async def build_gigachat_history(
+        self,
+        chat_id: int,
+        limit: int = 20,
+    ) -> list[dict[str, str]]:
+        messages = await self.messages.list_recent_completed_by_chat(
+            chat_id=chat_id,
+            limit=limit,
+        )
+
+        result: list[dict[str, str]] = []
+
+        for message in messages:
+            if not message.text:
+                continue
+
+            if message.sender_type == MessageSenderType.USER:
+                role = "user"
+            elif message.sender_type == MessageSenderType.ASSISTANT:
+                role = "assistant"
+            else:
+                role = "system"
+
+            result.append(
+                {
+                    "role": role,
+                    "content": message.text,
+                }
+            )
+
+        return result
+    
+    async def get_message(
+        self,
+        chat_id: int,
+        message_id: int,
+        current_user: User,
+    ) -> ChatMessage:
+        chat = await self.chats.get_by_user(
+            chat_id=chat_id,
+            user_id=current_user.id,
+        )
+
+        if not chat:
+            raise NotFoundError("Чат не найден")
+
+        message = await self.messages.get_by_chat(
+            message_id=message_id,
+            chat_id=chat.id,
+        )
+
+        if not message:
+            raise NotFoundError("Сообщение не найдено")
+
+        return message
+
+    async def retry_failed_assistant_message(
+        self,
+        chat_id: int,
+        message_id: int,
+        current_user: User,
+    ) -> ChatMessage:
+        chat = await self.chats.get_by_user(
+            chat_id=chat_id,
+            user_id=current_user.id,
+        )
+
+        if not chat:
+            raise NotFoundError("Чат не найден")
+
+        message = await self.messages.get_by_chat(
+            message_id=message_id,
+            chat_id=chat.id,
+        )
+
+        if not message:
+            raise NotFoundError("Сообщение не найдено")
+
+        if message.sender_type != MessageSenderType.ASSISTANT:
+            raise BadRequestError("Повторно можно запускать только assistant-сообщение")
+
+        if message.status != MessageStatus.FAILED:
+            raise BadRequestError("Повторно можно запускать только сообщение со статусом failed")
+
+        message = await self.messages.update(
+            message,
+            {
+                "status": MessageStatus.PENDING,
+                "text": None,
+                "error_message": None,
+                "gigachat_message_id": None,
+            },
+        )
+
+        chat.updated_at = datetime.now(UTC)
+        self.db.add(chat)
+
+        await self.db.commit()
+        await self.db.refresh(message)
+
+        from app.tasks.gigachat import process_gigachat_message
+
+        process_gigachat_message.delay(
+            message.id,
+            chat.id,
+        )
 
         return message

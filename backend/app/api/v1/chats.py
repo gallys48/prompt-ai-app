@@ -13,7 +13,11 @@ from app.schemas.chat import (
     ChatUpdate,
     ChatWithMessages,
 )
-from app.schemas.chat_message import SendMessageRequest, SendMessageResponse
+from app.schemas.chat_message import (
+    ChatMessageRead,
+    SendMessageRequest,
+    SendMessageResponse,
+)
 from app.services.chat import ChatService
 from app.services.chat_message import ChatMessageService
 
@@ -157,7 +161,7 @@ async def send_message(
 ):
     service = ChatMessageService(db)
 
-    user_message, assistant_message = await service.send_message_with_stub_response(
+    user_message, assistant_message = await service.send_message_to_gigachat(
         chat_id=chat_id,
         current_user=current_user,
         text=data.text,
@@ -166,4 +170,42 @@ async def send_message(
     return SendMessageResponse(
         user_message=user_message,
         assistant_message=assistant_message,
+    )
+
+@router.get(
+    "/{chat_id}/messages/{message_id}",
+    response_model=ChatMessageRead,
+)
+async def get_message(
+    chat_id: int,
+    message_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = ChatMessageService(db)
+
+    return await service.get_message(
+        chat_id=chat_id,
+        message_id=message_id,
+        current_user=current_user,
+    )
+
+
+@router.post(
+    "/{chat_id}/messages/{message_id}/retry",
+    response_model=ChatMessageRead,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def retry_failed_message(
+    chat_id: int,
+    message_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = ChatMessageService(db)
+
+    return await service.retry_failed_assistant_message(
+        chat_id=chat_id,
+        message_id=message_id,
+        current_user=current_user,
     )
