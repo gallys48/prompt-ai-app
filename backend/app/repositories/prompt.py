@@ -1,4 +1,4 @@
-from sqlalchemy import or_, select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.prompt import Prompt
@@ -16,7 +16,6 @@ class PromptRepository(BaseRepository[Prompt]):
         )
 
         result = await self.db.execute(stmt)
-
         return result.scalar_one_or_none()
 
     async def list_active(
@@ -44,11 +43,34 @@ class PromptRepository(BaseRepository[Prompt]):
 
         stmt = (
             stmt
-            .order_by(Prompt.created_at.desc())
+            .order_by(desc(Prompt.created_at))
             .offset(offset)
             .limit(limit)
         )
 
         result = await self.db.execute(stmt)
-
         return list(result.scalars().all())
+
+    async def count_active(
+        self,
+        search: str | None = None,
+        prompt_type: str | None = None,
+    ) -> int:
+        stmt = select(func.count(Prompt.id)).where(Prompt.is_active.is_(True))
+
+        if search:
+            search_pattern = f"%{search}%"
+
+            stmt = stmt.where(
+                or_(
+                    Prompt.short_description.ilike(search_pattern),
+                    Prompt.text.ilike(search_pattern),
+                    Prompt.type.ilike(search_pattern),
+                )
+            )
+
+        if prompt_type:
+            stmt = stmt.where(Prompt.type == prompt_type)
+
+        result = await self.db.execute(stmt)
+        return int(result.scalar_one())

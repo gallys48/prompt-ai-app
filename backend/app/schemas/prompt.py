@@ -31,3 +31,10 @@ class PromptRead(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PromptListResponse(BaseModel):
+    items: list[PromptRead]
+    total: int
+    offset: int
+    limit: int

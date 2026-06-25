@@ -1,7 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ForbiddenError, NotFoundError
+from app.models.enums import UserRole
 from app.models.prompt import Prompt
+from app.models.user import User
 from app.repositories.prompt import PromptRepository
 from app.schemas.prompt import PromptCreate, PromptUpdate
 
@@ -11,13 +13,20 @@ class PromptService:
         self.db = db
         self.prompts = PromptRepository(db)
 
+    def _can_manage_prompt(self, prompt: Prompt, current_user: User) -> bool:
+        if current_user.role in {UserRole.SUPERUSER, UserRole.ADMIN}:
+            return True
+
+        return prompt.user_id == current_user.id
+
     async def create_prompt(
         self,
         data: PromptCreate,
-        creator_id: int,
+        current_user: User,
     ) -> Prompt:
         create_data = data.model_dump()
-        create_data["user_id"] = creator_id
+        create_data["user_id"] = current_user.id
+        create_data["user_update_id"] = None
 
         prompt = await self.prompts.create(create_data)
 
@@ -40,24 +49,38 @@ class PromptService:
         limit: int = 100,
         search: str | None = None,
         prompt_type: str | None = None,
-    ) -> list[Prompt]:
-        return await self.prompts.list_active(
+    ) -> tuple[list[Prompt], int]:
+        prompts = await self.prompts.list_active(
             offset=offset,
             limit=limit,
             search=search,
             prompt_type=prompt_type,
         )
 
+        total = await self.prompts.count_active(
+            search=search,
+            prompt_type=prompt_type,
+        )
+
+        return prompts, total
+
     async def update_prompt(
         self,
         prompt_id: int,
         data: PromptUpdate,
-        updater_id: int,
+        current_user: User,
     ) -> Prompt:
         prompt = await self.get_prompt(prompt_id)
 
+        if not self._can_manage_prompt(prompt, current_user):
+            raise ForbiddenError("Недостаточно прав для изменения промпта")
+
         update_data = data.model_dump(exclude_unset=True)
-        update_data["user_update_id"] = updater_id
+
+        if not update_data:
+            return prompt
+
+        update_data["user_update_id"] = current_user.id
 
         prompt = await self.prompts.update(prompt, update_data)
 
@@ -69,15 +92,18 @@ class PromptService:
     async def soft_delete_prompt(
         self,
         prompt_id: int,
-        updater_id: int,
+        current_user: User,
     ) -> Prompt:
         prompt = await self.get_prompt(prompt_id)
+
+        if not self._can_manage_prompt(prompt, current_user):
+            raise ForbiddenError("Недостаточно прав для удаления промпта")
 
         prompt = await self.prompts.update(
             prompt,
             {
                 "is_active": False,
-                "user_update_id": updater_id,
+                "user_update_id": current_user.id,
             },
         )
 
