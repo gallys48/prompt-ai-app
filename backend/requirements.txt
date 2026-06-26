@@ -16,3 +16,6 @@ pwdlib[argon2]
 
 celery
 httpx
+
+pytest
+pytest-asyncio

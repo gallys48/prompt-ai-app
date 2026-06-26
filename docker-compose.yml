@@ -74,6 +74,42 @@ services:
         condition: service_healthy
     command: celery -A app.worker.celery_app:celery_app worker --loglevel=info
 
+  backend_tests:
+    build:
+      context: ./backend
+    container_name: prompt_ai_backend_tests
+    env_file:
+      - .env.test
+    working_dir: /app
+    environment:
+      PYTHONPATH: /app
+    volumes:
+      - ./backend:/app
+      - ./backend/logs:/app/logs
+    depends_on:
+      postgres_test:
+        condition: service_healthy
+    command: pytest -q
+  
+  postgres_test:
+    image: postgres:17
+    container_name: prompt_ai_postgres_test
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: prompt_ai_test_db
+      POSTGRES_USER: prompt_ai_test_user
+      POSTGRES_PASSWORD: prompt_ai_test_password
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prompt_ai_test_user -d prompt_ai_test_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   rabbitmq_data:
+  postgres_test_data:
