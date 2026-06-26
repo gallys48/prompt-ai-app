@@ -78,6 +78,8 @@ services:
     build:
       context: ./backend
     container_name: prompt_ai_backend_tests
+    profiles:
+      - test
     env_file:
       - .env.test
     working_dir: /app
@@ -95,6 +97,8 @@ services:
     image: postgres:17
     container_name: prompt_ai_postgres_test
     restart: unless-stopped
+    profiles:
+      - test
     environment:
       POSTGRES_DB: prompt_ai_test_db
       POSTGRES_USER: prompt_ai_test_user
