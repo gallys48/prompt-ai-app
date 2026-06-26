@@ -1,0 +1,23 @@
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_HOST_PORT}:5432"
+
+  rabbitmq:
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  backend:
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./backend/logs:/app/logs
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  celery_worker:
+    volumes:
+      - ./backend:/app
+      - ./backend/logs:/app/logs
+    command: celery -A app.worker.celery_app:celery_app worker --loglevel=info
