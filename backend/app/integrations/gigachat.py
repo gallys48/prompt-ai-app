@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -7,6 +8,9 @@ from uuid import uuid4
 import httpx
 
 from app.core.config import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class GigaChatError(Exception):
@@ -40,7 +44,14 @@ class GigaChatClient:
     async def get_access_token(self) -> str:
         if self._access_token and self._access_token_expires_at:
             if self._access_token_expires_at > datetime.now(UTC) + timedelta(seconds=30):
+                logger.debug("Using cached GigaChat access token")
                 return self._access_token
+
+        logger.info(
+            "Requesting GigaChat OAuth token scope=%s verify_ssl=%s",
+            self.scope,
+            self.verify_ssl,
+        )
 
         headers = {
             "Authorization": f"Basic {self.auth_key}",
@@ -53,20 +64,31 @@ class GigaChatClient:
             "scope": self.scope,
         }
 
-        async with httpx.AsyncClient(
-            verify=self._get_verify_param(),
-            timeout=self.timeout,
-        ) as client:
-            response = await client.post(
-                self.AUTH_URL,
-                headers=headers,
-                data=data,
-            )
+        try:
+            async with httpx.AsyncClient(
+                verify=self._get_verify_param(),
+                timeout=self.timeout,
+            ) as client:
+                response = await client.post(
+                    self.AUTH_URL,
+                    headers=headers,
+                    data=data,
+                )
+
+        except httpx.HTTPError as exc:
+            logger.exception("GigaChat OAuth HTTP error")
+            raise GigaChatError(f"Ошибка HTTP при получении OAuth token: {exc}") from exc
 
         if response.status_code != 200:
+            logger.warning(
+                "GigaChat OAuth failed status=%s body_preview=%s",
+                response.status_code,
+                response.text[:500],
+            )
+
             raise GigaChatError(
                 f"Ошибка получения OAuth token: "
-                f"status={response.status_code}, body={response.text}"
+                f"status={response.status_code}, body={response.text[:500]}"
             )
 
         payload = response.json()
@@ -75,10 +97,16 @@ class GigaChatClient:
         expires_at_raw = payload.get("expires_at")
 
         if not access_token:
+            logger.warning("GigaChat OAuth response without access_token")
             raise GigaChatError("GigaChat не вернул access_token")
 
         self._access_token = access_token
         self._access_token_expires_at = self._parse_expires_at(expires_at_raw)
+
+        logger.info(
+            "GigaChat OAuth token received expires_at=%s",
+            self._access_token_expires_at,
+        )
 
         return access_token
 
@@ -87,7 +115,10 @@ class GigaChatClient:
             try:
                 return datetime.fromtimestamp(expires_at_raw / 1000, tz=UTC)
             except Exception:
-                pass
+                logger.warning(
+                    "Failed to parse GigaChat expires_at=%s",
+                    expires_at_raw,
+                )
 
         return datetime.now(UTC) + timedelta(minutes=25)
 
@@ -96,6 +127,12 @@ class GigaChatClient:
         messages: list[dict[str, str]],
     ) -> tuple[str, str | None]:
         access_token = await self.get_access_token()
+
+        logger.info(
+            "Sending GigaChat chat completion model=%s messages_count=%s",
+            self.model,
+            len(messages),
+        )
 
         headers = {
             "Authorization": f"Bearer {access_token}",
@@ -109,20 +146,31 @@ class GigaChatClient:
             "temperature": 0.7,
         }
 
-        async with httpx.AsyncClient(
-            verify=self._get_verify_param(),
-            timeout=self.timeout,
-        ) as client:
-            response = await client.post(
-                self.CHAT_COMPLETIONS_URL,
-                headers=headers,
-                json=body,
-            )
+        try:
+            async with httpx.AsyncClient(
+                verify=self._get_verify_param(),
+                timeout=self.timeout,
+            ) as client:
+                response = await client.post(
+                    self.CHAT_COMPLETIONS_URL,
+                    headers=headers,
+                    json=body,
+                )
+
+        except httpx.HTTPError as exc:
+            logger.exception("GigaChat chat completion HTTP error")
+            raise GigaChatError(f"Ошибка HTTP при запросе chat completion: {exc}") from exc
 
         if response.status_code != 200:
+            logger.warning(
+                "GigaChat chat completion failed status=%s body_preview=%s",
+                response.status_code,
+                response.text[:500],
+            )
+
             raise GigaChatError(
                 f"Ошибка chat completion: "
-                f"status={response.status_code}, body={response.text}"
+                f"status={response.status_code}, body={response.text[:500]}"
             )
 
         payload = response.json()
@@ -130,15 +178,22 @@ class GigaChatClient:
         choices = payload.get("choices") or []
 
         if not choices:
+            logger.warning("GigaChat response without choices")
             raise GigaChatError(f"GigaChat не вернул choices: {payload}")
 
         message = choices[0].get("message") or {}
         content = message.get("content")
 
         if not content:
+            logger.warning("GigaChat response without content")
             raise GigaChatError(f"GigaChat не вернул content: {payload}")
 
         gigachat_message_id = payload.get("id")
+
+        logger.info(
+            "GigaChat chat completion success gigachat_message_id=%s",
+            gigachat_message_id,
+        )
 
         return content, gigachat_message_id
 

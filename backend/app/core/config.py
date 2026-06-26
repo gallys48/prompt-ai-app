@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     APP_ENV: str = "local"
+    LOG_LEVEL: str = "INFO"
 
     POSTGRES_DB: str
     POSTGRES_USER: str

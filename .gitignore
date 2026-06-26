@@ -20,3 +20,8 @@ node_modules/
 .next/
 dist/
 build/
+
+# logs
+backend/logs/
+*.log
+*.log.*
