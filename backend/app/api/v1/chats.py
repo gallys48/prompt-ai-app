@@ -17,6 +17,7 @@ from app.schemas.chat_message import (
     ChatMessageRead,
     SendMessageRequest,
     SendMessageResponse,
+    ChatMessageListResponse
 )
 from app.services.chat import ChatService
 from app.services.chat_message import ChatMessageService
@@ -93,6 +94,25 @@ async def list_chats(
         limit=limit,
     )
 
+@router.get(
+    "/{chat_id}/messages",
+    response_model=ChatMessageListResponse,
+)
+async def list_chat_messages(
+    chat_id: int,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = ChatMessageService(db)
+
+    return await service.list_chat_messages(
+        chat_id=chat_id,
+        current_user=current_user,
+        offset=offset,
+        limit=limit,
+    )
 
 @router.get(
     "/{chat_id}",

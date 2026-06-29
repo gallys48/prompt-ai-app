@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chat_message import ChatMessage
@@ -60,3 +60,29 @@ class ChatMessageRepository(BaseRepository[ChatMessage]):
         messages = list(result.scalars().all())
 
         return list(reversed(messages))
+    
+    async def list_by_chat(
+        self,
+        chat_id: int,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> list[ChatMessage]:
+        stmt = (
+            select(ChatMessage)
+            .where(ChatMessage.chat_id == chat_id)
+            .order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
+            .offset(offset)
+            .limit(limit)
+        )
+
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+
+    async def count_by_chat(self, chat_id: int) -> int:
+        stmt = select(func.count(ChatMessage.id)).where(
+            ChatMessage.chat_id == chat_id,
+        )
+
+        result = await self.db.execute(stmt)
+        return int(result.scalar_one())

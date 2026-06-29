@@ -19,6 +19,15 @@ class ChatRepository(BaseRepository[Chat]):
 
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+    
+    async def get_by_id(self, chat_id: int) -> Chat | None:
+        stmt = select(Chat).where(
+            Chat.id == chat_id,
+            Chat.is_active.is_(True),
+        )
+
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def get_by_user_with_messages(
         self,

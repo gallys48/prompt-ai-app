@@ -23,6 +23,13 @@ class ChatMessageRead(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class ChatMessageListResponse(BaseModel):
+    items: list[ChatMessageRead]
+    total: int
+    offset: int
+    limit: int
+    has_more: bool
+
 
 class SendMessageRequest(BaseModel):
     text: str = Field(min_length=1)

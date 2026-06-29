@@ -2,6 +2,8 @@ import logging
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from app.middleware.request_id import RequestIdMiddleware
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.chats import router as chats_router
@@ -16,7 +18,6 @@ from app.core.exceptions import (
     NotFoundError,
 )
 from app.core.logging import request_id_ctx_var, setup_logging
-from app.middleware.request_id import RequestIdMiddleware
 
 
 setup_logging()
@@ -27,6 +28,14 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.add_middleware(RequestIdMiddleware)

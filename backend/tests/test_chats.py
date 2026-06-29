@@ -1,4 +1,5 @@
 from httpx import AsyncClient
+from unittest.mock import patch
 
 from tests.conftest import auth_headers
 
@@ -174,3 +175,73 @@ async def test_send_message_creates_pending_assistant_message(
     assert data["assistant_message"]["sender_type"] == "assistant"
     assert data["assistant_message"]["status"] == "pending"
     assert data["assistant_message"]["text"] is None
+
+async def test_list_chat_messages(
+    client: AsyncClient,
+    user_token: str,
+):
+    create_response = await client.post(
+        "/api/v1/chats",
+        headers=auth_headers(user_token),
+        json={
+            "title": "Чат со списком сообщений",
+        },
+    )
+
+    assert create_response.status_code == 201
+    chat_id = create_response.json()["id"]
+
+    with patch("app.tasks.gigachat.process_gigachat_message.delay"):
+        send_response = await client.post(
+            f"/api/v1/chats/{chat_id}/messages",
+            headers=auth_headers(user_token),
+            json={
+                "text": "Привет",
+            },
+        )
+
+    assert send_response.status_code == 201
+
+    response = await client.get(
+        f"/api/v1/chats/{chat_id}/messages",
+        headers=auth_headers(user_token),
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["total"] == 2
+    assert data["offset"] == 0
+    assert data["limit"] == 50
+    assert data["has_more"] is False
+    assert len(data["items"]) == 2
+
+    assert data["items"][0]["sender_type"] == "user"
+    assert data["items"][0]["text"] == "Привет"
+
+    assert data["items"][1]["sender_type"] == "assistant"
+    assert data["items"][1]["status"] == "pending"
+
+async def test_user_cannot_list_another_user_chat_messages(
+    client: AsyncClient,
+    user_token: str,
+    second_user_token: str,
+):
+    create_response = await client.post(
+        "/api/v1/chats",
+        headers=auth_headers(user_token),
+        json={
+            "title": "Чужой чат",
+        },
+    )
+
+    assert create_response.status_code == 201
+    chat_id = create_response.json()["id"]
+
+    response = await client.get(
+        f"/api/v1/chats/{chat_id}/messages",
+        headers=auth_headers(second_user_token),
+    )
+
+    assert response.status_code == 403

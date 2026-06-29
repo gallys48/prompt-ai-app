@@ -2,12 +2,14 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.exceptions import BadRequestError, NotFoundError, ForbiddenError
 from app.models.chat_message import ChatMessage
 from app.models.enums import MessageSenderType, MessageStatus
 from app.models.user import User
+from app.models.enums import UserRole
 from app.repositories.chat import ChatRepository
 from app.repositories.chat_message import ChatMessageRepository
+from app.schemas.chat_message import ChatMessageListResponse
 
 
 class ChatMessageService:
@@ -267,3 +269,36 @@ class ChatMessageService:
         )
 
         return message
+    
+    async def list_chat_messages(
+        self,
+        chat_id: int,
+        current_user: User,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> ChatMessageListResponse:
+        chat = await self.chats.get_by_id(chat_id = chat_id)
+
+        if chat is None:
+            raise NotFoundError("Chat not found")
+
+        if chat.user_id != current_user.id and current_user.role not in {
+            UserRole.SUPERUSER,
+            UserRole.ADMIN,
+        }:
+            raise ForbiddenError("You do not have access to this chat")
+
+        total = await self.messages.count_by_chat(chat_id)
+        messages = await self.messages.list_by_chat(
+            chat_id=chat_id,
+            offset=offset,
+            limit=limit,
+        )
+
+        return ChatMessageListResponse(
+            items=messages,
+            total=total,
+            offset=offset,
+            limit=limit,
+            has_more=offset + limit < total,
+    )
