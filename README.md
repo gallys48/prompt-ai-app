@@ -408,9 +408,7 @@ docker compose --profile test run --rm backend_tests
 ## Future improvements
 
 - frontend на Next.js;
-- `.env.prod` и отдельная production-конфигурация окружения;
 - nginx + HTTPS;
-- CI/CD;
 - Sentry для ошибок;
 - Grafana + Loki + Promtail для централизованных логов;
 - rate limiting;
