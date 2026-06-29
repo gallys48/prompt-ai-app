@@ -1,6 +1,7 @@
 import logging
 import logging.config
 from contextvars import ContextVar
+import os
 from pathlib import Path
 
 from app.core.config import settings
@@ -21,7 +22,7 @@ class RequestIdFilter(logging.Filter):
 def setup_logging() -> None:
     log_level = settings.LOG_LEVEL.upper()
 
-    logs_dir = Path("/app/logs")
+    logs_dir = Path(os.getenv("LOG_DIR", "logs"))
     logs_dir.mkdir(parents=True, exist_ok=True)
 
     app_log_path = logs_dir / "app.log"
