@@ -12,6 +12,7 @@ from app.api.v1.prompts import router as prompts_router
 from app.api.v1.users import router as users_router
 from app.core.config import settings
 from app.core.exceptions import (
+    AppException,
     BadRequestError,
     ConflictError,
     ForbiddenError,
@@ -40,6 +41,18 @@ app.add_middleware(
 
 app.add_middleware(RequestIdMiddleware)
 
+@app.exception_handler(AppException)
+async def app_exception_handler(
+    request: Request,
+    exc: AppException,
+):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": exc.detail,
+            "request_id": request_id_ctx_var.get(),
+        },
+    )
 
 @app.exception_handler(BadRequestError)
 async def bad_request_exception_handler(

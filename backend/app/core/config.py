@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
+    ACCESS_TOKEN_COOKIE_NAME: str = "access_token"
+    REFRESH_TOKEN_COOKIE_NAME: str = "refresh_token"
+
+    COOKIE_SECURE: bool = False
+    COOKIE_SAMESITE: str = "lax"
+
     FIRST_ADMIN_FULL_NAME: str = "Администратор"
     FIRST_ADMIN_USERNAME: str = "admin"
     FIRST_ADMIN_EMAIL: str = "admin@example.com"

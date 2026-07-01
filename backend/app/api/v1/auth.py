@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Body, Cookie, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.config import settings
+from app.core.cookies import delete_auth_cookies, set_auth_cookies
+from app.core.exceptions import UnauthorizedError
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import (
@@ -33,17 +36,21 @@ async def register(
 
 @router.post("/login", response_model=AuthResponse)
 async def login(
-    data: LoginRequest,
-    request: Request,
+    payload: LoginRequest,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ):
     service = AuthService(db)
 
     user, tokens = await service.login(
-        login=data.login,
-        password=data.password,
-        user_agent=request.headers.get("user-agent"),
-        ip_address=request.client.host if request.client else None,
+        login=payload.login,
+        password=payload.password,
+    )
+
+    set_auth_cookies(
+        response=response,
+        access_token=tokens.access_token,
+        refresh_token=tokens.refresh_token,
     )
 
     return AuthResponse(
@@ -54,27 +61,62 @@ async def login(
 
 @router.post("/refresh", response_model=TokenPair)
 async def refresh(
-    data: RefreshTokenRequest,
-    request: Request,
+    response: Response,
+    payload: RefreshTokenRequest | None = Body(default=None),
+    refresh_token_cookie: str | None = Cookie(
+        default=None,
+        alias=settings.REFRESH_TOKEN_COOKIE_NAME,
+    ),
     db: AsyncSession = Depends(get_db),
 ):
+    refresh_token: str | None = None
+
+    if payload is not None:
+        refresh_token = payload.refresh_token
+    elif refresh_token_cookie is not None:
+        refresh_token = refresh_token_cookie
+
+    if refresh_token is None:
+        raise UnauthorizedError("Refresh token is missing")
+
     service = AuthService(db)
 
-    return await service.refresh_tokens(
-        refresh_token=data.refresh_token,
-        user_agent=request.headers.get("user-agent"),
-        ip_address=request.client.host if request.client else None,
+    tokens = await service.refresh_tokens(refresh_token)
+
+    set_auth_cookies(
+        response=response,
+        access_token=tokens.access_token,
+        refresh_token=tokens.refresh_token,
     )
 
+    return tokens
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+
+@router.post("/logout")
 async def logout(
-    data: LogoutRequest,
+    response: Response,
+    payload: LogoutRequest | None = Body(default=None),
+    refresh_token_cookie: str | None = Cookie(
+        default=None,
+        alias=settings.REFRESH_TOKEN_COOKIE_NAME,
+    ),
     db: AsyncSession = Depends(get_db),
 ):
+    refresh_token: str | None = None
+
+    if payload is not None:
+        refresh_token = payload.refresh_token
+    elif refresh_token_cookie is not None:
+        refresh_token = refresh_token_cookie
+
     service = AuthService(db)
 
-    await service.logout(data.refresh_token)
+    if refresh_token is not None:
+        await service.logout(refresh_token)
+
+    delete_auth_cookies(response)
+
+    return {"detail": "Logged out"}
 
 
 @router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
