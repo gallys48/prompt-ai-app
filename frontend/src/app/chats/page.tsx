@@ -1,6 +1,13 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 
 import { ApiError } from "@/lib/api";
@@ -59,11 +66,15 @@ export default function ChatsPage() {
   const { isLoading: isAuthLoading, isAuthenticated } = useAuth();
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const typingIntervalsRef = useRef<Record<number, number>>({});
 
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
   const [chatIdFromUrl, setChatIdFromUrl] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [typingTextByMessageId, setTypingTextByMessageId] = useState<
+    Record<number, string>
+  >({});
 
   const [newChatTitle, setNewChatTitle] = useState("");
   const [messageText, setMessageText] = useState("");
@@ -81,6 +92,75 @@ export default function ChatsPage() {
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
+
+  const startTypewriter = useCallback((message: ChatMessage) => {
+    if (message.sender_type !== "assistant") {
+      return;
+    }
+
+    if (message.status !== "completed") {
+      return;
+    }
+
+    if (!message.text) {
+      return;
+    }
+
+    if (typingIntervalsRef.current[message.id]) {
+      return;
+    }
+
+    const fullText = message.text;
+    let currentIndex = 0;
+
+    const chunkSize =
+      fullText.length > 1200
+        ? 8
+        : fullText.length > 600
+          ? 5
+          : fullText.length > 250
+            ? 3
+            : 2;
+
+    setTypingTextByMessageId((current) => ({
+      ...current,
+      [message.id]: "",
+    }));
+
+    const intervalId = window.setInterval(() => {
+      currentIndex = Math.min(currentIndex + chunkSize, fullText.length);
+
+      setTypingTextByMessageId((current) => ({
+        ...current,
+        [message.id]: fullText.slice(0, currentIndex),
+      }));
+
+      if (currentIndex >= fullText.length) {
+        window.clearInterval(intervalId);
+        delete typingIntervalsRef.current[message.id];
+
+        window.setTimeout(() => {
+          setTypingTextByMessageId((current) => {
+            const next = { ...current };
+            delete next[message.id];
+            return next;
+          });
+        }, 200);
+      }
+    }, 20);
+
+    typingIntervalsRef.current[message.id] = intervalId;
+  }, []);
+
+  function getVisibleMessageText(message: ChatMessage): string {
+    const typingText = typingTextByMessageId[message.id];
+
+    if (typingText !== undefined) {
+      return typingText;
+    }
+
+    return getMessageStatusText(message);
+  }
 
   function selectChat(chatId: number) {
     setSelectedChatId(chatId);
@@ -151,6 +231,16 @@ export default function ChatsPage() {
   }, []);
 
   useEffect(() => {
+    return () => {
+      Object.values(typingIntervalsRef.current).forEach((intervalId) => {
+        window.clearInterval(intervalId);
+      });
+
+      typingIntervalsRef.current = {};
+    };
+  }, []);
+
+  useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
       router.push("/login");
     }
@@ -163,6 +253,13 @@ export default function ChatsPage() {
   }, [isAuthenticated, loadChats]);
 
   useEffect(() => {
+    Object.values(typingIntervalsRef.current).forEach((intervalId) => {
+      window.clearInterval(intervalId);
+    });
+
+    typingIntervalsRef.current = {};
+    setTypingTextByMessageId({});
+
     if (selectedChatId) {
       void loadMessages(selectedChatId);
     } else {
@@ -191,7 +288,7 @@ export default function ChatsPage() {
       behavior: "smooth",
       block: "end",
     });
-  }, [messages]);
+  }, [messages, typingTextByMessageId]);
 
   useEffect(() => {
     if (!selectedChatId) {
@@ -223,6 +320,13 @@ export default function ChatsPage() {
               message.id,
             );
 
+            if (
+              updatedMessage.status === "completed" &&
+              message.status !== "completed"
+            ) {
+              startTypewriter(updatedMessage);
+            }
+
             setMessages((currentMessages) =>
               currentMessages.map((currentMessage) =>
                 currentMessage.id === updatedMessage.id
@@ -239,7 +343,7 @@ export default function ChatsPage() {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [selectedChatId, messages]);
+  }, [selectedChatId, messages, startTypewriter]);
 
   async function handleCreateChat(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
@@ -294,6 +398,10 @@ export default function ChatsPage() {
         data.assistant_message,
       ]);
 
+      if (data.assistant_message.status === "completed") {
+        startTypewriter(data.assistant_message);
+      }
+
       setMessageText("");
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error));
@@ -312,6 +420,10 @@ export default function ChatsPage() {
 
     try {
       const updatedMessage = await retryChatMessage(selectedChatId, message.id);
+
+      if (updatedMessage.status === "completed") {
+        startTypewriter(updatedMessage);
+      }
 
       setMessages((currentMessages) =>
         currentMessages.map((currentMessage) =>
@@ -378,7 +490,10 @@ export default function ChatsPage() {
           </button>
         </div>
 
-        <form onSubmit={handleCreateChat} className="border-b border-neutral-800 p-3">
+        <form
+          onSubmit={handleCreateChat}
+          className="border-b border-neutral-800 p-3"
+        >
           <input
             value={newChatTitle}
             onChange={(event) => setNewChatTitle(event.target.value)}
@@ -421,7 +536,7 @@ export default function ChatsPage() {
                     type="button"
                     onClick={() => void handleDeleteChat(chat.id)}
                     disabled={actionChatId === chat.id}
-                    className="opacity-0 text-xs text-neutral-500 transition hover:text-red-300 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-xs text-neutral-500 opacity-0 transition hover:text-red-300 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
                     title="Удалить чат"
                   >
                     ✕
@@ -440,7 +555,9 @@ export default function ChatsPage() {
               {selectedChat ? selectedChat.title : "Prompt AI Chat"}
             </h1>
             <p className="text-xs text-neutral-500">
-              {selectedChat ? `Чат #${selectedChat.id}` : "Выбери чат или начни новый"}
+              {selectedChat
+                ? `Чат #${selectedChat.id}`
+                : "Выбери чат или начни новый"}
             </p>
           </div>
         </header>
@@ -465,7 +582,8 @@ export default function ChatsPage() {
 
                 <p className="max-w-xl text-sm leading-6 text-neutral-400">
                   Создай новый чат, выбери существующий слева или вставь промпт
-                  из раздела промптов. Перед отправкой текст можно отредактировать.
+                  из раздела промптов. Перед отправкой текст можно
+                  отредактировать.
                 </p>
               </div>
             ) : isMessagesLoading ? (
@@ -487,6 +605,8 @@ export default function ChatsPage() {
               <div className="space-y-7">
                 {messages.map((message) => {
                   const isUser = message.sender_type === "user";
+                  const isTyping =
+                    typingTextByMessageId[message.id] !== undefined;
 
                   return (
                     <article
@@ -513,7 +633,12 @@ export default function ChatsPage() {
                         </div>
 
                         <div className="whitespace-pre-wrap">
-                          {getMessageStatusText(message)}
+                          {getVisibleMessageText(message)}
+                          {isTyping && (
+                            <span className="ml-1 inline-block animate-pulse text-emerald-300">
+                              ▍
+                            </span>
+                          )}
                         </div>
 
                         {message.sender_type === "assistant" &&

@@ -11,13 +11,8 @@ export function AppHeader() {
             AI
           </div>
 
-          <div>
-            <div className="text-sm font-semibold text-neutral-100">
-              Prompt AI App
-            </div>
-            <div className="text-xs text-neutral-500">
-              Prompts · Chats · GigaChat
-            </div>
+          <div className="text-sm font-semibold text-neutral-100">
+            Prompt AI
           </div>
         </Link>
 

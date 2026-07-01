@@ -5,8 +5,8 @@ import { AuthProvider } from "@/providers/auth-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Prompt AI App",
-  description: "Платформа промптов и AI-чатов",
+  title: "Prompt AI",
+  description: "Рабочее пространство для промптов и AI-диалогов",
 };
 
 export default function RootLayout({

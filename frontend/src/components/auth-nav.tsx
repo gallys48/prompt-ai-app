@@ -15,7 +15,7 @@ export function AuthNav() {
 
   if (!isAuthenticated) {
     return (
-      <nav className="flex items-center gap-3 text-sm">
+      <nav className="flex items-center gap-2 text-sm">
         <Link
           href="/login"
           className="rounded-xl px-3 py-2 text-neutral-300 transition hover:bg-neutral-900 hover:text-white"
@@ -35,19 +35,18 @@ export function AuthNav() {
 
   return (
     <nav className="flex items-center gap-2 text-sm">
+      <Link
+        href="/chats"
+        className="rounded-xl px-3 py-2 text-neutral-300 transition hover:bg-neutral-900 hover:text-white"
+      >
+        Чаты
+      </Link>
 
       <Link
         href="/prompts"
         className="rounded-xl px-3 py-2 text-neutral-300 transition hover:bg-neutral-900 hover:text-white"
       >
         Промпты
-      </Link>
-
-      <Link
-        href="/chats"
-        className="rounded-xl px-3 py-2 text-neutral-300 transition hover:bg-neutral-900 hover:text-white"
-      >
-        Чаты
       </Link>
 
       {user?.role === "admin" && (
@@ -60,7 +59,7 @@ export function AuthNav() {
       )}
 
       <div className="hidden rounded-xl border border-neutral-800 px-3 py-2 text-neutral-400 md:block">
-        {user?.username}
+        @{user?.username}
       </div>
 
       <button
