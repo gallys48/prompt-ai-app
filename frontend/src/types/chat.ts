@@ -11,6 +11,25 @@ export type Chat = {
   updated_at: string;
 };
 
+export type ChatWithMessages = Chat & {
+  messages: ChatMessage[];
+};
+
+export type ChatListResponse = {
+  items: Chat[];
+  total: number;
+  offset: number;
+  limit: number;
+};
+
+export type ChatCreateRequest = {
+  title: string;
+};
+
+export type ChatUpdateRequest = {
+  title?: string;
+};
+
 export type ChatMessage = {
   id: number;
   chat_id: number;
@@ -28,4 +47,13 @@ export type ChatMessageListResponse = {
   offset: number;
   limit: number;
   has_more: boolean;
+};
+
+export type SendChatMessageRequest = {
+  text: string;
+};
+
+export type SendChatMessageResponse = {
+  user_message: ChatMessage;
+  assistant_message: ChatMessage;
 };

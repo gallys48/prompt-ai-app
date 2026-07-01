@@ -1,9 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { PageContainer } from "@/components/page-container";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -28,7 +28,7 @@ export default function LoginPage() {
         password,
       });
 
-      router.push("/dashboard");
+      router.push("/chats");
     } catch (error) {
       if (error instanceof ApiError) {
         setErrorMessage("Не удалось войти. Проверь логин и пароль.");
@@ -41,51 +41,74 @@ export default function LoginPage() {
   }
 
   return (
-    <PageContainer>
-      <form
-        onSubmit={handleSubmit}
-        className="mx-auto mt-20 w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm"
-      >
-        <h1 className="mb-2 text-2xl font-semibold">Вход</h1>
-
-        <p className="mb-6 text-sm text-zinc-500">
-          Войди под активным аккаунтом. Pending-пользователь не сможет войти,
-          пока его не подтвердит администратор.
-        </p>
-
-        {errorMessage && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {errorMessage}
+    <main className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-neutral-950 px-4 py-10 text-neutral-100">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500 text-xl font-bold text-white">
+            AI
           </div>
-        )}
 
-        <div className="space-y-4">
-          <input
-            value={loginValue}
-            onChange={(event) => setLoginValue(event.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-4 py-3 outline-none focus:border-zinc-950"
-            placeholder="Логин или email"
-            required
-          />
-
-          <input
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-4 py-3 outline-none focus:border-zinc-950"
-            placeholder="Пароль"
-            type="password"
-            required
-          />
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-lg bg-zinc-950 px-4 py-3 text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting ? "Входим..." : "Войти"}
-          </button>
+          <h1 className="text-3xl font-semibold text-white">Вход</h1>
+          <p className="mt-2 text-sm text-neutral-400">
+            Войди в активный аккаунт, чтобы работать с промптами и чатами.
+          </p>
         </div>
-      </form>
-    </PageContainer>
+
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6 shadow-2xl"
+        >
+          {errorMessage && (
+            <div className="mb-4 rounded-2xl border border-red-500/30 bg-red-950/50 px-4 py-3 text-sm text-red-100">
+              {errorMessage}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm text-neutral-300">
+                Логин или email
+              </label>
+              <input
+                value={loginValue}
+                onChange={(event) => setLoginValue(event.target.value)}
+                className="w-full rounded-2xl border border-neutral-700 bg-neutral-800 px-4 py-3 text-sm text-white placeholder:text-neutral-500 outline-none transition focus:border-emerald-500"
+                placeholder="user или user@example.com"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm text-neutral-300">
+                Пароль
+              </label>
+              <input
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full rounded-2xl border border-neutral-700 bg-neutral-800 px-4 py-3 text-sm text-white placeholder:text-neutral-500 outline-none transition focus:border-emerald-500"
+                placeholder="••••••••"
+                type="password"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-medium text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-500"
+            >
+              {isSubmitting ? "Входим..." : "Войти"}
+            </button>
+          </div>
+
+          <p className="mt-6 text-center text-sm text-neutral-400">
+            Нет аккаунта?{" "}
+            <Link href="/register" className="text-emerald-400 hover:underline">
+              Зарегистрироваться
+            </Link>
+          </p>
+        </form>
+      </div>
+    </main>
   );
 }

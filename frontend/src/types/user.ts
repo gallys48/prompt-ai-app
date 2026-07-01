@@ -7,7 +7,8 @@ export type User = {
   full_name: string;
   username: string;
   email: string;
-  organization_name: string | null;
+  org: string | null;
+  post: string | null;
   role: UserRole;
   status: UserStatus;
   is_active: boolean;

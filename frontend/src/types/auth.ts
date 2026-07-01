@@ -5,7 +5,8 @@ export type RegisterRequest = {
   username: string;
   email: string;
   password: string;
-  organization_name?: string | null;
+  org?: string | null;
+  post?: string | null;
 };
 
 export type LoginRequest = {
@@ -17,6 +18,11 @@ export type TokenPair = {
   access_token: string;
   refresh_token: string;
   token_type: string;
+};
+
+export type AuthResponse = {
+  user: User;
+  tokens: TokenPair;
 };
 
 export type MeResponse = User;

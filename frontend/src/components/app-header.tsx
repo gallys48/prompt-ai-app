@@ -4,10 +4,21 @@ import { AuthNav } from "@/components/auth-nav";
 
 export function AppHeader() {
   return (
-    <header className="border-b border-zinc-200 bg-white">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="text-lg font-semibold">
-          Prompt AI App
+    <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/90 backdrop-blur">
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-sm font-bold text-white">
+            AI
+          </div>
+
+          <div>
+            <div className="text-sm font-semibold text-neutral-100">
+              Prompt AI App
+            </div>
+            <div className="text-xs text-neutral-500">
+              Prompts · Chats · GigaChat
+            </div>
+          </div>
         </Link>
 
         <AuthNav />

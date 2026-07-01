@@ -10,19 +10,22 @@ export function AuthNav() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
 
   if (isLoading) {
-    return <div className="text-sm text-zinc-500">Загрузка...</div>;
+    return <div className="text-sm text-neutral-500">Загрузка...</div>;
   }
 
   if (!isAuthenticated) {
     return (
-      <nav className="flex items-center gap-4 text-sm">
-        <Link href="/login" className="text-zinc-700 hover:text-zinc-950">
+      <nav className="flex items-center gap-3 text-sm">
+        <Link
+          href="/login"
+          className="rounded-xl px-3 py-2 text-neutral-300 transition hover:bg-neutral-900 hover:text-white"
+        >
           Войти
         </Link>
 
         <Link
           href="/register"
-          className="rounded-lg bg-zinc-950 px-4 py-2 text-white hover:bg-zinc-800"
+          className="rounded-xl bg-emerald-500 px-4 py-2 font-medium text-white transition hover:bg-emerald-400"
         >
           Регистрация
         </Link>
@@ -31,23 +34,36 @@ export function AuthNav() {
   }
 
   return (
-    <nav className="flex items-center gap-4 text-sm">
-      <Link href="/dashboard" className="text-zinc-700 hover:text-zinc-950">
-        Dashboard
+    <nav className="flex items-center gap-2 text-sm">
+
+      <Link
+        href="/prompts"
+        className="rounded-xl px-3 py-2 text-neutral-300 transition hover:bg-neutral-900 hover:text-white"
+      >
+        Промпты
       </Link>
 
-      <span className="text-zinc-500">{user?.username}</span>
+      <Link
+        href="/chats"
+        className="rounded-xl px-3 py-2 text-neutral-300 transition hover:bg-neutral-900 hover:text-white"
+      >
+        Чаты
+      </Link>
+
+      <div className="hidden rounded-xl border border-neutral-800 px-3 py-2 text-neutral-400 md:block">
+        {user?.username}
+      </div>
 
       <button
         type="button"
         onClick={async () => {
-            await logout();
-            router.push("/");
+          await logout();
+          router.push("/");
         }}
-        className="rounded-lg border border-zinc-300 px-4 py-2 hover:bg-zinc-100"
-        >
+        className="rounded-xl border border-neutral-700 px-3 py-2 text-neutral-300 transition hover:bg-neutral-900 hover:text-white"
+      >
         Выйти
-    </button>
+      </button>
     </nav>
   );
 }

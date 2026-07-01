@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+
 import { AppHeader } from "@/components/app-header";
 import { AuthProvider } from "@/providers/auth-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Prompt AI App",
-  description: "Сайт промптов и ИИ-чата",
+  description: "Платформа промптов и AI-чатов",
 };
 
 export default function RootLayout({
@@ -14,8 +15,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru">
-      <body className="min-h-screen bg-zinc-50 text-zinc-950">
+    <html lang="ru" suppressHydrationWarning>
+      <body className="min-h-screen bg-neutral-950 text-neutral-100">
         <AuthProvider>
           <AppHeader />
           {children}
