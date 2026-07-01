@@ -2,7 +2,6 @@ import { config } from "@/lib/config";
 
 type ApiRequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
-  token?: string;
   body?: unknown;
 };
 
@@ -21,12 +20,10 @@ export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  };
+  const headers: HeadersInit = {};
 
-  if (options.token) {
-    headers.Authorization = `Bearer ${options.token}`;
+  if (options.body) {
+    headers["Content-Type"] = "application/json";
   }
 
   const response = await fetch(`${config.apiBaseUrl}${path}`, {
@@ -34,6 +31,7 @@ export async function apiRequest<T>(
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
     cache: "no-store",
+    credentials: "include",
   });
 
   const contentType = response.headers.get("content-type");
