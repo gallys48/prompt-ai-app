@@ -78,3 +78,13 @@ class Prompt(Base):
         back_populates="prompts_updated",
         foreign_keys=[user_update_id],
     )
+
+    @property
+    def creator_username(self) -> str | None:
+        if "creator" not in self.__dict__:
+            return None
+
+        if self.creator is None:
+            return None
+
+        return self.creator.username

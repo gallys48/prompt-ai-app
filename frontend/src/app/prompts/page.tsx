@@ -38,7 +38,7 @@ function getApiErrorMessage(error: unknown): string {
 
 export default function PromptsPage() {
   const router = useRouter();
-  const { isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
 
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [total, setTotal] = useState(0);
@@ -97,6 +97,14 @@ export default function PromptsPage() {
     setText("");
     setEditingPromptId(null);
   }
+
+  function canManagePrompt(prompt: Prompt): boolean {
+    if (!user) {
+        return false;
+    }
+
+    return user.role === "admin" || prompt.user_id === user.id;
+    }
 
   function startEdit(prompt: Prompt) {
     setEditingPromptId(prompt.id);
@@ -333,8 +341,14 @@ export default function PromptsPage() {
                   >
                     <div className="mb-4 flex items-start justify-between gap-4">
                       <div>
-                        <div className="mb-3 inline-flex rounded-full border border-emerald-500/30 bg-emerald-950/40 px-3 py-1 text-xs text-emerald-300">
-                          {prompt.type}
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                            <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-950/40 px-3 py-1 text-xs text-emerald-300">
+                                {prompt.type}
+                            </span>
+
+                            <span className="inline-flex rounded-full border border-neutral-700 bg-neutral-800 px-3 py-1 text-xs text-neutral-400">
+                                Автор: @{prompt.creator_username ?? `user_${prompt.user_id}`}
+                            </span>
                         </div>
 
                         <h2 className="text-xl font-semibold text-white">
@@ -357,28 +371,30 @@ export default function PromptsPage() {
                         onClick={() => void handleCreateChat(prompt)}
                         disabled={actionPromptId === prompt.id}
                         className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-500"
-                      >
-                        {actionPromptId === prompt.id
-                          ? "Открываем..."
-                          : "Создать чат"}
-                      </button>
+                        >
+                        {actionPromptId === prompt.id ? "Открываем..." : "Создать чат"}
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => startEdit(prompt)}
-                        className="rounded-2xl border border-neutral-700 px-4 py-2 text-sm text-neutral-300 transition hover:bg-neutral-800"
-                      >
-                        Редактировать
-                      </button>
+                        {canManagePrompt(prompt) && (
+                        <>
+                            <button
+                            type="button"
+                            onClick={() => startEdit(prompt)}
+                            className="rounded-2xl border border-neutral-700 px-4 py-2 text-sm text-neutral-300 transition hover:bg-neutral-800"
+                            >
+                            Редактировать
+                            </button>
 
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(prompt.id)}
-                        disabled={actionPromptId === prompt.id}
-                        className="rounded-2xl border border-red-500/30 px-4 py-2 text-sm text-red-300 transition hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Удалить
-                      </button>
+                            <button
+                            type="button"
+                            onClick={() => void handleDelete(prompt.id)}
+                            disabled={actionPromptId === prompt.id}
+                            className="rounded-2xl border border-red-500/30 px-4 py-2 text-sm text-red-300 transition hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                            Удалить
+                            </button>
+                        </>
+                        )}
                     </div>
                   </article>
                 ))}

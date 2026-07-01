@@ -7,11 +7,12 @@ export type User = {
   full_name: string;
   username: string;
   email: string;
-  org: string | null;
+  image_url: string | null;
+  org: string;
   post: string | null;
   role: UserRole;
   status: UserStatus;
   is_active: boolean;
-  created_at: string;
+  registered_at: string;
   updated_at: string;
 };

@@ -1,5 +1,6 @@
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.prompt import Prompt
 from app.repositories.base import BaseRepository
@@ -10,9 +11,13 @@ class PromptRepository(BaseRepository[Prompt]):
         super().__init__(Prompt, db)
 
     async def get_active(self, prompt_id: int) -> Prompt | None:
-        stmt = select(Prompt).where(
-            Prompt.id == prompt_id,
-            Prompt.is_active.is_(True),
+        stmt = (
+            select(Prompt)
+            .options(selectinload(Prompt.creator))
+            .where(
+                Prompt.id == prompt_id,
+                Prompt.is_active.is_(True),
+            )
         )
 
         result = await self.db.execute(stmt)
@@ -25,7 +30,11 @@ class PromptRepository(BaseRepository[Prompt]):
         search: str | None = None,
         prompt_type: str | None = None,
     ) -> list[Prompt]:
-        stmt = select(Prompt).where(Prompt.is_active.is_(True))
+        stmt = (
+            select(Prompt)
+            .options(selectinload(Prompt.creator))
+            .where(Prompt.is_active.is_(True))
+        )
 
         if search:
             search_pattern = f"%{search}%"

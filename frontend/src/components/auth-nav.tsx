@@ -50,6 +50,15 @@ export function AuthNav() {
         Чаты
       </Link>
 
+      {user?.role === "admin" && (
+        <Link
+          href="/admin/users"
+          className="rounded-xl px-3 py-2 text-neutral-300 transition hover:bg-neutral-900 hover:text-white"
+        >
+          Админка
+        </Link>
+      )}
+
       <div className="hidden rounded-xl border border-neutral-800 px-3 py-2 text-neutral-400 md:block">
         {user?.username}
       </div>
