@@ -7,6 +7,40 @@ import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 
+function getApiErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return "Произошла неизвестная ошибка.";
+  }
+
+  const detail = error.detail;
+
+  if (typeof detail === "string") {
+    return detail;
+  }
+
+  if (detail && typeof detail === "object" && "detail" in detail) {
+    const nestedDetail = (detail as { detail?: unknown }).detail;
+
+    if (typeof nestedDetail === "string") {
+      return nestedDetail;
+    }
+
+    if (Array.isArray(nestedDetail)) {
+      return "Проверь логин и пароль.";
+    }
+  }
+
+  if (error.status === 400 || error.status === 401) {
+    return "Неверный логин или пароль.";
+  }
+
+  if (error.status === 403) {
+    return "Аккаунт неактивен, заблокирован или ожидает подтверждения.";
+  }
+
+  return "Не удалось войти. Проверь логин и пароль.";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
@@ -24,17 +58,13 @@ export default function LoginPage() {
 
     try {
       await login({
-        login: loginValue,
+        login: loginValue.trim(),
         password,
       });
 
       router.push("/chats");
     } catch (error) {
-      if (error instanceof ApiError) {
-        setErrorMessage("Не удалось войти. Проверь логин и пароль.");
-      } else {
-        setErrorMessage("Произошла неизвестная ошибка.");
-      }
+      setErrorMessage(getApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -74,6 +104,7 @@ export default function LoginPage() {
                 onChange={(event) => setLoginValue(event.target.value)}
                 className="w-full rounded-2xl border border-neutral-700 bg-neutral-800 px-4 py-3 text-sm text-white placeholder:text-neutral-500 outline-none transition focus:border-emerald-500"
                 placeholder="user или user@example.com"
+                autoComplete="username"
                 required
               />
             </div>
@@ -88,6 +119,7 @@ export default function LoginPage() {
                 className="w-full rounded-2xl border border-neutral-700 bg-neutral-800 px-4 py-3 text-sm text-white placeholder:text-neutral-500 outline-none transition focus:border-emerald-500"
                 placeholder="••••••••"
                 type="password"
+                autoComplete="current-password"
                 required
               />
             </div>

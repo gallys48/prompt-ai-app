@@ -6,6 +6,40 @@ import Link from "next/link";
 import { ApiError } from "@/lib/api";
 import { registerUser } from "@/lib/auth-api";
 
+function getApiErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return "Произошла неизвестная ошибка.";
+  }
+
+  const detail = error.detail;
+
+  if (typeof detail === "string") {
+    return detail;
+  }
+
+  if (detail && typeof detail === "object" && "detail" in detail) {
+    const nestedDetail = (detail as { detail?: unknown }).detail;
+
+    if (typeof nestedDetail === "string") {
+      return nestedDetail;
+    }
+
+    if (Array.isArray(nestedDetail)) {
+      return "Проверь правильность заполнения полей.";
+    }
+  }
+
+  if (error.status === 409 || error.status === 400) {
+    return "Пользователь с таким email или username уже существует.";
+  }
+
+  if (error.status === 422) {
+    return "Проверь данные. Пароль должен быть не короче 8 символов.";
+  }
+
+  return "Не удалось зарегистрироваться. Проверь данные.";
+}
+
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
@@ -27,11 +61,11 @@ export default function RegisterPage() {
 
     try {
       await registerUser({
-        full_name: fullName,
-        username,
-        email,
-        org: org || null,
-        post: post || null,
+        full_name: fullName.trim(),
+        username: username.trim(),
+        email: email.trim(),
+        org: org.trim(),
+        post: post.trim() || null,
         password,
       });
 
@@ -46,11 +80,7 @@ export default function RegisterPage() {
       setPost("");
       setPassword("");
     } catch (error) {
-      if (error instanceof ApiError) {
-        setErrorMessage("Не удалось зарегистрироваться. Проверь данные.");
-      } else {
-        setErrorMessage("Произошла неизвестная ошибка.");
-      }
+      setErrorMessage(getApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -93,6 +123,7 @@ export default function RegisterPage() {
               onChange={(event) => setFullName(event.target.value)}
               className="w-full rounded-2xl border border-neutral-700 bg-neutral-800 px-4 py-3 text-sm text-white placeholder:text-neutral-500 outline-none transition focus:border-emerald-500"
               placeholder="ФИО"
+              autoComplete="name"
               required
             />
 
@@ -101,6 +132,9 @@ export default function RegisterPage() {
               onChange={(event) => setUsername(event.target.value)}
               className="w-full rounded-2xl border border-neutral-700 bg-neutral-800 px-4 py-3 text-sm text-white placeholder:text-neutral-500 outline-none transition focus:border-emerald-500"
               placeholder="Username"
+              autoComplete="username"
+              minLength={3}
+              maxLength={20}
               required
             />
 
@@ -110,6 +144,7 @@ export default function RegisterPage() {
               className="w-full rounded-2xl border border-neutral-700 bg-neutral-800 px-4 py-3 text-sm text-white placeholder:text-neutral-500 outline-none transition focus:border-emerald-500"
               placeholder="Email"
               type="email"
+              autoComplete="email"
               required
             />
 
@@ -119,6 +154,7 @@ export default function RegisterPage() {
                 onChange={(event) => setOrg(event.target.value)}
                 className="w-full rounded-2xl border border-neutral-700 bg-neutral-800 px-4 py-3 text-sm text-white placeholder:text-neutral-500 outline-none transition focus:border-emerald-500"
                 placeholder="Организация"
+                required
               />
 
               <input
@@ -135,6 +171,9 @@ export default function RegisterPage() {
               className="w-full rounded-2xl border border-neutral-700 bg-neutral-800 px-4 py-3 text-sm text-white placeholder:text-neutral-500 outline-none transition focus:border-emerald-500"
               placeholder="Пароль"
               type="password"
+              autoComplete="new-password"
+              minLength={8}
+              maxLength={128}
               required
             />
 

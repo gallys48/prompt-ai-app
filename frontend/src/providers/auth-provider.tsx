@@ -68,6 +68,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     try {
       await logoutUser();
+    } catch {
+      // Даже если серверный logout не сработал,
+      // локально пользователь всё равно должен выйти.
     } finally {
       setUser(null);
     }

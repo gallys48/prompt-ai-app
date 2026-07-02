@@ -49,6 +49,13 @@ export function AuthNav() {
         Промпты
       </Link>
 
+      <Link
+        href="/profile"
+        className="rounded-xl px-3 py-2 text-neutral-300 transition hover:bg-neutral-900 hover:text-white"
+      >
+        Профиль
+      </Link>
+
       {user?.role === "admin" && (
         <Link
           href="/admin/users"

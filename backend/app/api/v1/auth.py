@@ -122,6 +122,7 @@ async def logout(
 @router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
 async def change_password(
     data: ChangePasswordRequest,
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -132,3 +133,5 @@ async def change_password(
         old_password=data.old_password,
         new_password=data.new_password,
     )
+
+    delete_auth_cookies(response)

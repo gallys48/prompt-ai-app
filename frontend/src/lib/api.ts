@@ -18,6 +18,16 @@ export class ApiError extends Error {
 }
 
 async function parseResponseData(response: Response): Promise<unknown> {
+  if (response.status === 204) {
+    return null;
+  }
+
+  const contentLength = response.headers.get("content-length");
+
+  if (contentLength === "0") {
+    return null;
+  }
+
   const contentType = response.headers.get("content-type");
   const hasJson = contentType?.includes("application/json");
 
@@ -25,30 +35,19 @@ async function parseResponseData(response: Response): Promise<unknown> {
     return null;
   }
 
-  return response.json();
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
 }
 
 function shouldTryRefresh(path: string, options: ApiRequestOptions): boolean {
-  if (options.skipAuthRefresh) {
-    return false;
-  }
-
-  if (path.startsWith("/auth/login")) {
-    return false;
-  }
-
-  if (path.startsWith("/auth/register")) {
-    return false;
-  }
-
-  if (path.startsWith("/auth/refresh")) {
-    return false;
-  }
-
-  if (path.startsWith("/auth/logout")) {
-    return false;
-  }
-
+  if (options.skipAuthRefresh) return false;
+  if (path.startsWith("/auth/login")) return false;
+  if (path.startsWith("/auth/register")) return false;
+  if (path.startsWith("/auth/refresh")) return false;
+  if (path.startsWith("/auth/logout")) return false;
   return true;
 }
 
@@ -75,10 +74,7 @@ async function rawApiRequest<T>(
   const response = await fetch(`${config.apiBaseUrl}${path}`, {
     method: options.method ?? "GET",
     headers,
-    body:
-      options.body !== undefined
-        ? JSON.stringify(options.body)
-        : undefined,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     cache: "no-store",
     credentials: "include",
   });
@@ -99,23 +95,13 @@ export async function apiRequest<T>(
   try {
     return await rawApiRequest<T>(path, options);
   } catch (error) {
-    if (!(error instanceof ApiError)) {
-      throw error;
-    }
-
-    if (error.status !== 401) {
-      throw error;
-    }
-
-    if (!shouldTryRefresh(path, options)) {
-      throw error;
-    }
+    if (!(error instanceof ApiError)) throw error;
+    if (error.status !== 401) throw error;
+    if (!shouldTryRefresh(path, options)) throw error;
 
     const refreshed = await refreshAuthSession();
 
-    if (!refreshed) {
-      throw error;
-    }
+    if (!refreshed) throw error;
 
     return rawApiRequest<T>(path, {
       ...options,
